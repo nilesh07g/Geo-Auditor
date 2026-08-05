@@ -1,8 +1,8 @@
-"""Check 4: Answer-Ready Content Structure. Implemented in Milestone M6.
+"""Check 4: Answer-Ready Content Structure. Implemented in Milestone M6."""
 
 import re
 import uuid
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from models import (
     CheckResult,
@@ -274,20 +274,20 @@ def evaluate_answer_ready(
                     recommended_fix=(
                         f"<!-- Add proper FAQPage schema for each FAQ heading -->\n"
                         f'<script type="application/ld+json">\n'
-                        f'{{
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  "mainEntity": [
-    {{
-      "@type": "Question",
-      "name": "{heading}",
-      "acceptedAnswer": {{
-        "@type": "Answer",
-        "text": "Answer to: {heading}"
-      }}
-    }}
-  ]
-}}\n'
+                        f'{{\n'
+                        f'  "@context": "https://schema.org",\n'
+                        f'  "@type": "FAQPage",\n'
+                        f'  "mainEntity": [\n'
+                        f'    {{\n'
+                        f'      "@type": "Question",\n'
+                        f'      "name": "{heading}",\n'
+                        f'      "acceptedAnswer": {{\n'
+                        f'        "@type": "Answer",\n'
+                        f'        "text": "Answer to: {heading}"\n'
+                        f'      }}\n'
+                        f'    }}\n'
+                        f'  ]\n'
+                        f'}}\n'
                         f'</script>'
                     ),
                 ))

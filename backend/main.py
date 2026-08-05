@@ -16,8 +16,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
 )
 
 
@@ -124,7 +124,9 @@ async def run_audit(request: AuditRequest):
         geo_score=score_result["overall_score"],
         grade=score_result["grade"],
         executive_summary=executive_summary,
-        aha_line=critical_findings[0].why_it_matters if critical_findings else "No critical issues found.",
+        aha_line=(critical_findings[0].why_it_matters if critical_findings else
+                  high_findings[0].why_it_matters if high_findings else
+                  "No critical or high issues found."),
         score_breakdown=[
             {
                 "check_id": c.check_id,

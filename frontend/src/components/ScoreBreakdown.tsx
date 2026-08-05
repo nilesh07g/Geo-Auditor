@@ -81,8 +81,8 @@ export const ScoreBreakdown: React.FC<ScoreBreakdownProps> = ({ items, totalScor
       </div>
 
       <div className="deterministic-note">
-        <InfoIcon className="icon-sm text-sky-400" />
-        <span>
+        <InfoIcon className="deterministic-icon text-sky-400" />
+        <span className="deterministic-text">
           <strong>Deterministic Guarantee:</strong> All scores above are generated using reproducible
           code logic and HTML/robots.txt extraction rules. No LLM APIs were used to compute these points.
         </span>

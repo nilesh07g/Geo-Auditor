@@ -1,4 +1,4 @@
-"""Check 3: Structured Data for AI Extraction. Implemented in Milestone M6.
+"""Check 3: Structured Data for AI Extraction. Implemented in Milestone M6."""
 
 import json
 import uuid

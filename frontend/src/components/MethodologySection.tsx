@@ -22,9 +22,12 @@ export const MethodologySection: React.FC<MethodologySectionProps> = ({
 
       <div className="methodology-grid">
         <div className="methodology-column">
-          <h4 className="column-title flex items-center gap-2 text-emerald-400">
-            <CheckCircleIcon className="icon-sm" /> Verified Strengths
-          </h4>
+          <div className="column-header">
+            <div className="methodology-icon-wrapper">
+              <CheckCircleIcon className="methodology-icon text-emerald-400" />
+            </div>
+            <h4 className="column-title">Verified Strengths</h4>
+          </div>
           <ul className="strengths-list">
             {strengths.map((str, idx) => (
               <li key={idx} className="strength-item">
@@ -36,9 +39,12 @@ export const MethodologySection: React.FC<MethodologySectionProps> = ({
         </div>
 
         <div className="methodology-column">
-          <h4 className="column-title flex items-center gap-2 text-amber-400">
-            <AlertCircleIcon className="icon-sm" /> Scope & Limitations
-          </h4>
+          <div className="column-header">
+            <div className="methodology-icon-wrapper">
+              <AlertCircleIcon className="methodology-icon text-amber-400" />
+            </div>
+            <h4 className="column-title">Scope & Limitations</h4>
+          </div>
           <ul className="limitations-list">
             {limitations.map((lim, idx) => (
               <li key={idx} className="limitation-item">

@@ -62,6 +62,6 @@ def get_geo_grade(score: int) -> str:
     elif score >= 60:
         return "Moderate gaps"
     elif score >= 40:
-        return "At risk"
+        return "At Risk"
     else:
         return "Critical"

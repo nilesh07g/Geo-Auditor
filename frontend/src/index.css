@@ -630,13 +630,37 @@ body {
 .deterministic-note {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.9rem;
   background: rgba(56, 189, 248, 0.08);
   border: 1px solid rgba(56, 189, 248, 0.2);
-  padding: 0.85rem 1.25rem;
+  padding: 0.75rem 1rem;
   border-radius: 10px;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   color: var(--text-secondary);
+  line-height: 1.5;
+  flex-wrap: wrap;
+}
+
+.deterministic-icon {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+}
+
+.deterministic-text {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.deterministic-note strong {
+  color: var(--text-primary);
+}
+
+@media (max-width: 640px) {
+  .deterministic-note {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 /* Findings Section */
@@ -674,25 +698,39 @@ body {
   color: var(--text-primary);
 }
 
+.icon-md {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.icon-xs {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
 .findings-list {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .finding-item-card {
   background: rgba(3, 7, 18, 0.4);
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  padding: 1.5rem;
+  padding: 1rem;
+  page-break-inside: avoid;
+  break-inside: avoid;
+  break-inside: avoid-page;
 }
 
 .finding-item-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 1rem;
-  margin-bottom: 0.85rem;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .finding-title-group {
@@ -748,7 +786,7 @@ body {
 }
 
 .finding-section {
-  margin-bottom: 1rem;
+  margin-bottom: 0.8rem;
 }
 
 .finding-section-label {
@@ -975,28 +1013,61 @@ body {
 .methodology-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 2rem;
-  margin: 1.5rem 0;
+  gap: 1.25rem;
+  margin: 1.25rem 0;
+  align-items: stretch;
+}
+
+.methodology-column {
+  background: rgba(3, 7, 18, 0.45);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.column-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: center;
+}
+
+.methodology-icon-wrapper {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  display: grid;
+  place-items: center;
+}
+
+.methodology-icon {
+  width: 72px;
+  height: 72px;
 }
 
 .column-title {
   font-size: 1rem;
   font-weight: 700;
-  margin-bottom: 1rem;
+  margin: 0;
 }
 
 .strengths-list, .limitations-list {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.65rem;
 }
 
 .strength-item, .limitation-item {
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
-  font-size: 0.9rem;
+  font-size: 0.92rem;
   color: var(--text-secondary);
 }
 
@@ -1004,16 +1075,17 @@ body {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  margin-top: 0.5rem;
+  margin-top: 0.4rem;
   flex-shrink: 0;
 }
 
 .pages-analyzed-box {
   background: rgba(3, 7, 18, 0.5);
   border: 1px solid var(--border-color);
-  padding: 1rem;
+  padding: 0.95rem;
   border-radius: 10px;
   font-size: 0.85rem;
+  margin-top: 0.75rem;
 }
 
 .pages-list {
@@ -1044,7 +1116,7 @@ body {
 @media print {
   body { background: white; color: black; }
   .app-header, .app-footer, .btn, .filter-tabs { display: none !important; }
-  .card { border: 1px solid #ccc; background: white; color: black; box-shadow: none; margin-bottom: 1rem; page-break-inside: avoid; }
+  .card, .finding-item-card { border: 1px solid #ccc; background: white; color: black; box-shadow: none; margin-bottom: 1rem; page-break-inside: avoid; break-inside: avoid; }
   .summary-text, .why-text { color: #333; }
   .evidence-block, .fix-code-block { background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; }
 }
