@@ -27,7 +27,7 @@ EXPECTED_SCHEMAS_BY_CATEGORY = {
 }
 
 
-def extract_jsonld_types(page: Optional[PageData]) -> Set[str]:
+def extract_jsonld_types(page: Optional[PageData], preserve_case: bool = False) -> Set[str]:
     """Extract all JSON-LD @type values from a page."""
     if not page:
         return set()
@@ -38,10 +38,15 @@ def extract_jsonld_types(page: Optional[PageData]) -> Set[str]:
         if isinstance(schema_type, list):
             for t in schema_type:
                 if isinstance(t, str):
-                    types.add(t.lower())
+                    types.add(t if preserve_case else t.lower())
         elif isinstance(schema_type, str):
-            types.add(schema_type.lower())
+            types.add(schema_type if preserve_case else schema_type.lower())
     return types
+
+
+def normalize_schema_types(schema_types: Set[str]) -> Set[str]:
+    """Normalize schema type names to a consistent case for comparison."""
+    return {schema_type.lower() for schema_type in schema_types if isinstance(schema_type, str)}
 
 
 def score_schemas_found(found_types: Set[str], expected_types: Set[str]) -> Tuple[int, Set[str], Set[str]]:
@@ -49,8 +54,11 @@ def score_schemas_found(found_types: Set[str], expected_types: Set[str]) -> Tupl
     Score based on how many expected schema types are found.
     Returns (score, found_expected, missing_expected)
     """
-    found_expected = found_types.intersection(expected_types)
-    missing_expected = expected_types - found_types
+    normalized_found_types = normalize_schema_types(found_types)
+    normalized_expected_types = normalize_schema_types(expected_types)
+
+    found_expected = normalized_found_types.intersection(normalized_expected_types)
+    missing_expected = normalized_expected_types - normalized_found_types
 
     # Score: 0 if none found, 8 if <50% found, 16 if >=50% found, 25 if all found
     if not expected_types:
@@ -98,18 +106,26 @@ def evaluate_structured_data(
 
     # Collect all JSON-LD types found across the 3 pages
     all_found_types: Set[str] = set()
+    all_display_found_types: Set[str] = set()
     pages_with_schemas: List[Tuple[str, Set[str]]] = []  # (url, types_found)
 
     for page in all_pages:
         if page and page.json_ld_schemas:
             found_types = extract_jsonld_types(page)
+            display_found_types = extract_jsonld_types(page, preserve_case=True)
             all_found_types.update(found_types)
+            all_display_found_types.update(display_found_types)
             if found_types:
                 pages_with_schemas.append((page.url, found_types))
 
     # Score based on schema coverage
     schema_score, found_expected, missing_expected = score_schemas_found(all_found_types, expected_types)
     score += schema_score
+
+    # Preserve original display names for findings while using normalized values for matching
+    display_missing_expected = {schema_type for schema_type in expected_types if schema_type.lower() in missing_expected}
+    display_found_types = sorted(all_display_found_types) if all_display_found_types else []
+    missing_display_types = sorted(display_missing_expected)
 
     # Generate findings
     if not pages_with_schemas:
@@ -149,10 +165,10 @@ def evaluate_structured_data(
         ))
     elif missing_expected:
         # Some expected schemas are missing
-        missing_str = ", ".join(sorted(missing_expected))
-        found_str = ", ".join(sorted(found_expected)) if found_expected else "none"
+        missing_str = ", ".join(missing_display_types)
+        found_str = ", ".join(display_found_types) if display_found_types else "none"
 
-        severity = Severity.medium if len(found_expected) > len(missing_expected) else Severity.high
+        severity = Severity.medium if len(all_display_found_types) > len(display_missing_expected) else Severity.high
 
         findings.append(Finding(
             id=str(uuid.uuid4()),
@@ -162,8 +178,8 @@ def evaluate_structured_data(
             confidence=Confidence.high,
             page_url=pages_with_schemas[0][0] if pages_with_schemas else (homepage.url if homepage else "unknown"),
             evidence=(
-                f"Found schema types: {found_str or 'none'}. "
-                f"Expected for {business_category.replace('_', ' ')} business: {', '.join(sorted(expected_types))}."
+                f"Detected schema types: {found_str or 'none'}. "
+                f"Missing expected schema types: {missing_str or 'none'}."
             ),
             why_it_matters=(
                 f"Missing schema types like {missing_str.split(',')[0].strip()} reduce AI engines' ability "
@@ -171,20 +187,15 @@ def evaluate_structured_data(
                 f"This can lead to incomplete or incorrect representations in AI-generated answers."
             ),
             recommended_fix=(
-                f"# Add the missing schema types to your JSON-LD:\n"
-                f"# For example, to add FAQPage schema:\n"
-                '<script type="application/ld+json">\n'
-                '{ "@context": "https://schema.org",\n'
-                '  "@type": "FAQPage",\n'
-                '  "mainEntity": [\n'
-                '    {\n'
-                '      "@type": "Question",\n'
-                '      "name": "What services do you offer?",\n'
-                '      "acceptedAnswer": { "@type": "Answer", "text": "We offer [list your services]." }\n'
-                '    }\n'
-                '  ]\n'
-                '}\n'
-                '</script>'
+                "\n\n".join(
+                    [
+                        f"# Add {schema_type} schema markup to your JSON-LD.\n"
+                        f'<script type="application/ld+json">\n'
+                        f'{{ "@context": "https://schema.org", "@type": "{schema_type}" }}\n'
+                        f'</script>'
+                        for schema_type in missing_display_types
+                    ]
+                )
             ),
         ))
     else:

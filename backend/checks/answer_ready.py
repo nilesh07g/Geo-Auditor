@@ -4,6 +4,8 @@ import re
 import uuid
 from typing import List, Optional, Tuple
 
+from bs4 import BeautifulSoup
+
 from models import (
     CheckResult,
     Confidence,
@@ -67,6 +69,64 @@ def split_sentences(text: str) -> List[str]:
     return [sentence.strip() for sentence in re.split(SENTENCE_SPLIT_RE, text) if sentence.strip()]
 
 
+def is_user_generated_sentence(sentence: str) -> bool:
+    """Heuristically identify testimonial or review-style sentences in otherwise business-owned content."""
+    if not sentence:
+        return False
+
+    lower = sentence.lower().strip()
+    review_markers = [
+        "testimonial",
+        "testimonials",
+        "review",
+        "reviews",
+        "customer story",
+        "customer stories",
+        "what our customers say",
+        "what customers say",
+        "would highly recommend",
+        "highly recommend",
+        "i loved",
+        "i would recommend",
+        "great experience",
+        "amazing service",
+        "excellent service",
+        "five stars",
+        "four stars",
+        "star rating",
+    ]
+    if any(marker in lower for marker in review_markers):
+        return True
+
+    if re.search(r"\b(i|we|my|our)\b.*\b(recommend|love|loved|great|excellent|amazing|satisfied|happy)\b", lower):
+        return True
+
+    return False
+
+
+def extract_business_owned_text(html: str) -> str:
+    """Extract business-owned content from likely editorial sections while skipping reviews and testimonials."""
+    if not html:
+        return ""
+
+    soup = BeautifulSoup(html, "html.parser")
+    for element in soup(["script", "style", "noscript", "svg"]):
+        element.decompose()
+
+    main_content = soup.find(["main", "article", "section"])
+    if main_content:
+        cleaned_text = main_content.get_text(" ", strip=True)
+    else:
+        cleaned_text = soup.get_text(" ", strip=True)
+
+    kept_sentences = [
+        sentence.strip()
+        for sentence in split_sentences(cleaned_text)
+        if sentence.strip() and not is_user_generated_sentence(sentence)
+    ]
+    return re.sub(r"\s+", " ", " ".join(kept_sentences)).strip()
+
+
 def is_boilerplate_sentence(sentence: str) -> bool:
     lower = sentence.lower().strip()
     if len(lower.split()) <= 3:
@@ -116,6 +176,13 @@ def detect_definitional_sentence(text: str) -> Tuple[int, str, str]:
 
     Returns (pts 0/4/8, matched_text, explanation).
     """
+    if not text:
+        return 0, "", "none"
+
+    if "<" in text:
+        business_owned_text = extract_business_owned_text(text)
+    else:
+        business_owned_text = text
     # Check H1s first (strongest signal)
     if text.strip().startswith('<h1>') or text.strip().startswith('<h1 '):
         # Extract H1 content
@@ -131,7 +198,7 @@ def detect_definitional_sentence(text: str) -> Tuple[int, str, str]:
             return 4, h1_text, "h1_exists_not_definitional"
 
     # Check first 600 words of body text for definition (simplified)
-    first_chunk = ' '.join(text.split()[:600])
+    first_chunk = ' '.join(business_owned_text.split()[:600])
     for pat in DEFINITION_PATTERNS:
         match = re.search(pat, first_chunk, re.IGNORECASE)
         if match:

@@ -5,7 +5,29 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
-from models import AuditRequest, AuditResponse, AIVisibilityRequest, AIVisibilityResponse
+from models import AuditRequest, AuditResponse, AIVisibilityRequest, AIVisibilityResponse, Finding, Severity, Confidence
+
+
+def is_positive_finding(finding: Finding) -> bool:
+    """Return True only for findings that clearly represent positive signals."""
+    if finding.severity != Severity.low or finding.confidence != Confidence.high:
+        return False
+
+    action_text = (finding.recommended_fix or "").strip().lower()
+    if not action_text:
+        return False
+
+    positive_markers = (
+        "no action required",
+        "no action needed",
+        "no action necessary",
+        "well-formed factual content",
+    )
+    if any(marker in action_text for marker in positive_markers):
+        return True
+
+    return False
+
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -88,7 +110,7 @@ async def run_audit(request: AuditRequest):
 
     strengths = []
     for finding in all_findings:
-        if finding.severity in [Severity.low, Severity.medium] and finding.confidence == Confidence.high:
+        if is_positive_finding(finding):
             strengths.append(finding.title)
 
     executive_summary = f"GEO audit completed for {request.url}. "
@@ -151,7 +173,7 @@ async def run_audit(request: AuditRequest):
     # Create strengths from positive findings
     strengths = []
     for finding in all_findings:
-        if finding.severity in [Severity.low, Severity.medium] and finding.confidence == Confidence.high:
+        if is_positive_finding(finding):
             strengths.append(f"Strong {finding.title}")
 
     # Create limitations from crawl limitations
