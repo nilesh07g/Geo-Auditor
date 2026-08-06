@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GEO Audit Report - GitHub</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 2rem; }
+    .container { max-width: 900px; margin: 0 auto; background: #1e293b; border-radius: 12px; padding: 2rem; border: 1px solid #334155; }
+    h1 { color: #38bdf8; margin-top: 0; }
+    .hero-score { font-size: 3rem; font-weight: bold; color: #10b981; margin: 1rem 0; }
+    .grade { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; background: #991b1b; color: #fecaca; font-weight: bold; }
+    .card { background: #0f172a; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #334155; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { text-align: left; padding: 0.75rem; border-bottom: 1px solid #334155; }
+    th { color: #94a3b8; }
+    pre { background: #020617; padding: 1rem; border-radius: 6px; overflow-x: auto; color: #38bdf8; }
+    .sev-critical { color: #ef4444; font-weight: bold; }
+    .sev-high { color: #f97316; font-weight: bold; }
+    .sev-medium { color: #eab308; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>GEO Visibility Audit</h1>
+    <p><strong>Target:</strong> https://github.com/ (GitHub)</p>
+    <p><strong>Audited At:</strong> 8/6/2026, 9:00:07 AM</p>
+    
+    <div class="card">
+      <h2>Executive Score: <span class="hero-score">40/100</span> <span class="grade">At Risk</span></h2>
+      <p><strong>Verdict:</strong> GEO audit completed for https://github.com/. Priority improvement: Vague homepage H1 heading — missing explicit entity definition. Overall visibility is at risk without addressing higher-priority technical and content gaps.</p>
+      <p><strong>Aha Line:</strong> AI language models require clear, self-contained definitional statements ("[Business] is a [type] serving [location]") to categorize your entity accurately in knowledge graphs and answer generation pipelines.</p>
+    </div>
+
+    <div class="card">
+      <h3>Score Breakdown</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Check</th>
+            <th>Raw Score</th>
+            <th>Weight</th>
+            <th>Weighted Points</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+            <tr>
+              <td>AI Crawler Access</td>
+              <td>20/20</td>
+              <td>20%</td>
+              <td>+20 pts</td>
+            </tr>
+          
+            <tr>
+              <td>Entity Clarity</td>
+              <td>5/25</td>
+              <td>25%</td>
+              <td>+5 pts</td>
+            </tr>
+          
+            <tr>
+              <td>Structured Data for AI Extraction</td>
+              <td>9/25</td>
+              <td>25%</td>
+              <td>+9 pts</td>
+            </tr>
+          
+            <tr>
+              <td>Answer-Ready Content Structure</td>
+              <td>6/30</td>
+              <td>30%</td>
+              <td>+6 pts</td>
+            </tr>
+          
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Audit Findings (5 issues)</h3>
+      
+        <div style="border-bottom: 1px solid #334155; padding-bottom: 1rem; margin-bottom: 1rem;">
+          <h4 class="sev-high">Vague homepage H1 heading — missing explicit entity definition [HIGH]</h4>
+          <p><strong>Evidence:</strong></p>
+          <pre>H1 text found: 'The future of building happens together'</pre>
+          <p><strong>Why it matters:</strong> AI language models require clear, self-contained definitional statements ("[Business] is a [type] serving [location]") to categorize your entity accurately in knowledge graphs and answer generation pipelines.</p>
+          <p><strong>Fix:</strong></p>
+          <pre><!-- Replace vague headline with a clear entity definition statement -->
+<h1>GitHub: [Type of Business] in [City / Market]</h1>
+<p>GitHub is a [licensed/certified] [service type] serving [location] since [founding year]. We specialize in [core service 1], [core service 2], and [core service 3].</p></pre>
+        </div>
+      
+        <div style="border-bottom: 1px solid #334155; padding-bottom: 1rem; margin-bottom: 1rem;">
+          <h4 class="sev-high">No Organization or LocalBusiness JSON-LD schema found on any crawled page [HIGH]</h4>
+          <p><strong>Evidence:</strong></p>
+          <pre>Searched Homepage, About page, and Service page. No <script type="application/ld+json"> containing Organization, LocalBusiness, or equivalent schema type was found.</pre>
+          <p><strong>Why it matters:</strong> Without Organization schema, AI models must guess your business type, location, phone number, and service catalog from unstructured text — leading to incomplete or incorrect AI-generated answers about your business.</p>
+          <p><strong>Fix:</strong></p>
+          <pre><script type="application/ld+json">
+{ "@context": "https://schema.org",
+  "@type": "LocalBusiness",
+  "name": "GitHub",
+  "url": "https://github.com/",
+  "telephone": "+1-XXX-XXX-XXXX",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "123 Main St",
+    "addressLocality": "Your City",
+    "addressRegion": "ST",
+    "postalCode": "00000"
+  },
+  "description": "One clear sentence about what you do and where."
+}
+</script></pre>
+        </div>
+      
+        <div style="border-bottom: 1px solid #334155; padding-bottom: 1rem; margin-bottom: 1rem;">
+          <h4 class="sev-medium">No Name, Address, or Phone (NAP) contact information detected [MEDIUM]</h4>
+          <p><strong>Evidence:</strong></p>
+          <pre>Scanned Homepage, About page, and Service page body text and JSON-LD schema. No phone number pattern or physical address pattern detected.</pre>
+          <p><strong>Why it matters:</strong> AI models rely on NAP consistency to confidently identify and locate local businesses. Missing contact details cause AI engines to omit or misattribute your business in local and geographic queries.</p>
+          <p><strong>Fix:</strong></p>
+          <pre># Add NAP to your site footer and Organization schema:
+
+**GitHub**
+123 Main Street, City, ST 00000
+Phone: (555) 555-5555
+Email: info@yourdomain.com
+
+# And in JSON-LD schema:
+  "telephone": "(555) 555-5555",
+  "address": {"@type": "PostalAddress", "streetAddress": "123 Main St", ...}</pre>
+        </div>
+      
+        <div style="border-bottom: 1px solid #334155; padding-bottom: 1rem; margin-bottom: 1rem;">
+          <h4 class="sev-high">Missing expected structured data types: LocalBusiness, Service [HIGH]</h4>
+          <p><strong>Evidence:</strong></p>
+          <pre>Detected schema types: FAQPage. Missing expected schema types: LocalBusiness, Service.</pre>
+          <p><strong>Why it matters:</strong> Missing schema types like LocalBusiness reduce AI engines' ability to accurately extract specific information about your local service business. This can lead to incomplete or incorrect representations in AI-generated answers.</p>
+          <p><strong>Fix:</strong></p>
+          <pre># Add LocalBusiness schema markup to your JSON-LD.
+<script type="application/ld+json">
+{ "@context": "https://schema.org", "@type": "LocalBusiness" }
+</script>
+
+# Add Service schema markup to your JSON-LD.
+<script type="application/ld+json">
+{ "@context": "https://schema.org", "@type": "Service" }
+</script></pre>
+        </div>
+      
+        <div style="border-bottom: 1px solid #334155; padding-bottom: 1rem; margin-bottom: 1rem;">
+          <h4 class="sev-high">No specific facts found [HIGH]</h4>
+          <p><strong>Evidence:</strong></p>
+          <pre>No measurable factual content detected in page copy.</pre>
+          <p><strong>Why it matters:</strong> Without measurable facts, AI engines must rely on generic copy, which reduces answer precision and business citation value.</p>
+          <p><strong>Fix:</strong></p>
+          <pre>Add specific, measurable facts such as establishment year, service area, staff size, certifications, or operating hours.</pre>
+        </div>
+      
+    </div>
+  </div>
+</body>
+</html>

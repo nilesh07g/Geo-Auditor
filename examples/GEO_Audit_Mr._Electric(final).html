@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GEO Audit Report - Mr. Electric</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 2rem; }
+    .container { max-width: 900px; margin: 0 auto; background: #1e293b; border-radius: 12px; padding: 2rem; border: 1px solid #334155; }
+    h1 { color: #38bdf8; margin-top: 0; }
+    .hero-score { font-size: 3rem; font-weight: bold; color: #10b981; margin: 1rem 0; }
+    .grade { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; background: #991b1b; color: #fecaca; font-weight: bold; }
+    .card { background: #0f172a; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #334155; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { text-align: left; padding: 0.75rem; border-bottom: 1px solid #334155; }
+    th { color: #94a3b8; }
+    pre { background: #020617; padding: 1rem; border-radius: 6px; overflow-x: auto; color: #38bdf8; }
+    .sev-critical { color: #ef4444; font-weight: bold; }
+    .sev-high { color: #f97316; font-weight: bold; }
+    .sev-medium { color: #eab308; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>GEO Visibility Audit</h1>
+    <p><strong>Target:</strong> https://mrelectric.com/ (Mr. Electric)</p>
+    <p><strong>Audited At:</strong> 8/6/2026, 8:50:02 AM</p>
+    
+    <div class="card">
+      <h2>Executive Score: <span class="hero-score">76/100</span> <span class="grade">Moderate gaps</span></h2>
+      <p><strong>Verdict:</strong> GEO audit completed for https://mrelectric.com/. Strongest positive signal: Extractable specific facts detected. The site shows moderate issues around Missing expected structured data types: LocalBusiness, Service. Overall visibility is decent, but there are clear opportunities to improve AI extractability.</p>
+      <p><strong>Aha Line:</strong> Missing schema types like LocalBusiness reduce AI engines' ability to accurately extract specific information about your local service business. This can lead to incomplete or incorrect representations in AI-generated answers.</p>
+    </div>
+
+    <div class="card">
+      <h3>Score Breakdown</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Check</th>
+            <th>Raw Score</th>
+            <th>Weight</th>
+            <th>Weighted Points</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+            <tr>
+              <td>AI Crawler Access</td>
+              <td>20/20</td>
+              <td>20%</td>
+              <td>+20 pts</td>
+            </tr>
+          
+            <tr>
+              <td>Entity Clarity</td>
+              <td>21/25</td>
+              <td>25%</td>
+              <td>+21 pts</td>
+            </tr>
+          
+            <tr>
+              <td>Structured Data for AI Extraction</td>
+              <td>11/25</td>
+              <td>25%</td>
+              <td>+11 pts</td>
+            </tr>
+          
+            <tr>
+              <td>Answer-Ready Content Structure</td>
+              <td>24/30</td>
+              <td>30%</td>
+              <td>+24 pts</td>
+            </tr>
+          
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Audit Findings (3 issues)</h3>
+      
+        <div style="border-bottom: 1px solid #334155; padding-bottom: 1rem; margin-bottom: 1rem;">
+          <h4 class="sev-medium">Missing expected structured data types: LocalBusiness, Service [MEDIUM]</h4>
+          <p><strong>Evidence:</strong></p>
+          <pre>Detected schema types: BreadcrumbList, FAQPage, Organization. Missing expected schema types: LocalBusiness, Service.</pre>
+          <p><strong>Why it matters:</strong> Missing schema types like LocalBusiness reduce AI engines' ability to accurately extract specific information about your local service business. This can lead to incomplete or incorrect representations in AI-generated answers.</p>
+          <p><strong>Fix:</strong></p>
+          <pre># Add LocalBusiness schema markup to your JSON-LD.
+<script type="application/ld+json">
+{ "@context": "https://schema.org", "@type": "LocalBusiness" }
+</script>
+
+# Add Service schema markup to your JSON-LD.
+<script type="application/ld+json">
+{ "@context": "https://schema.org", "@type": "Service" }
+</script></pre>
+        </div>
+      
+        <div style="border-bottom: 1px solid #334155; padding-bottom: 1rem; margin-bottom: 1rem;">
+          <h4 class="sev-medium">Generic marketing copy detected [MEDIUM]</h4>
+          <p><strong>Evidence:</strong></p>
+          <pre>Our safety-first commitment to solving your electrical issues includes meticulous attention to detail on every job. | Each brand shares a Code of Values and culture to live by, which not only outline how we work in a professional environment, but also how we live our daily lives. | Our safety-first commitment to solving your electric-related needs includes meticulous attention to detail on every job.</pre>
+          <p><strong>Why it matters:</strong> AI engines prefer meaningful, factual sentences over generic marketing copy for accurate business extraction.</p>
+          <p><strong>Fix:</strong></p>
+          <pre>Replace this marketing-heavy sentence with a clear, factual statement about your business, services, location, or credentials.</pre>
+        </div>
+      
+        <div style="border-bottom: 1px solid #334155; padding-bottom: 1rem; margin-bottom: 1rem;">
+          <h4 class="sev-low">Extractable specific facts detected [LOW]</h4>
+          <p><strong>Evidence:</strong></p>
+          <pre>Electric makes getting the electrical service you need easy with call-ahead scheduling and 24/7 customer service. | Electric franchisees provide these services to both residential and commercial customers at almost 200 locations worldwide. | Call for 24/7 Scheduling Easy Online Booking Benefits of Emergency Services by Mr.</pre>
+          <p><strong>Why it matters:</strong> Specific factual sentences provide extractable content that AI engines can cite accurately.</p>
+          <p><strong>Fix:</strong></p>
+          <pre>No action required. This page contains well-formed factual content.</pre>
+        </div>
+      
+    </div>
+  </div>
+</body>
+</html>
