@@ -1,10 +1,33 @@
 """FastAPI application entry point - GEO Auditor API."""
 
+import re
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
-from models import AuditRequest, AuditResponse, AIVisibilityRequest, AIVisibilityResponse
+from models import AuditRequest, AuditResponse, AIVisibilityRequest, AIVisibilityResponse, Finding, Severity, Confidence
+
+
+def is_positive_finding(finding: Finding) -> bool:
+    """Return True only for findings that clearly represent positive signals."""
+    if finding.severity != Severity.low or finding.confidence != Confidence.high:
+        return False
+
+    action_text = (finding.recommended_fix or "").strip().lower()
+    if not action_text:
+        return False
+
+    positive_markers = (
+        "no action required",
+        "no action needed",
+        "no action necessary",
+        "well-formed factual content",
+    )
+    if any(marker in action_text for marker in positive_markers):
+        return True
+
+    return False
+
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -82,34 +105,75 @@ async def run_audit(request: AuditRequest):
 
     critical_findings = [f for f in all_findings if f.severity == Severity.critical]
     high_findings = [f for f in all_findings if f.severity == Severity.high]
+    medium_findings = [f for f in all_findings if f.severity == Severity.medium]
+    low_findings = [f for f in all_findings if f.severity == Severity.low]
 
-    # Create a concise executive summary
+    strengths = []
+    for finding in all_findings:
+        if is_positive_finding(finding):
+            strengths.append(finding.title)
+
     executive_summary = f"GEO audit completed for {request.url}. "
+    if strengths:
+        executive_summary += f"Strongest positive signal: {strengths[0]}. "
+
+    if critical_findings:
+        executive_summary += f"Highest-impact issue: {critical_findings[0].title}. "
+    elif high_findings:
+        executive_summary += f"Priority improvement: {high_findings[0].title}. "
+    elif medium_findings:
+        executive_summary += f"The site shows moderate issues around {medium_findings[0].title}. "
+    else:
+        executive_summary += "The site has no major issues, but continued content and crawl visibility improvements are recommended. "
 
     if score_result["overall_score"] >= 80:
-        executive_summary += "The business shows strong GEO visibility with most critical areas addressed."
+        executive_summary += "Overall GEO visibility is strong with only minor optimization opportunities."
     elif score_result["overall_score"] >= 60:
-        executive_summary += "The business has moderate GEO gaps that should be addressed for better AI visibility."
+        executive_summary += "Overall visibility is decent, but there are clear opportunities to improve AI extractability."
     elif score_result["overall_score"] >= 40:
-        executive_summary += "The business is at risk of low AI visibility due to significant GEO issues."
+        executive_summary += "Overall visibility is at risk without addressing higher-priority technical and content gaps."
     else:
-        executive_summary += "The business has critical GEO issues that require immediate attention."
+        executive_summary += "Overall visibility is critical and requires prioritized fixes across the audit scope."
 
-    # Create prioritized action plan from critical findings
+    # Create prioritized action plan from findings
     action_plan = []
-    for i, finding in enumerate(critical_findings[:3]):  # Top 3 critical issues
+    seen_actions: set[str] = set()
+    severity_order = {
+        Severity.critical: 1,
+        Severity.high: 2,
+        Severity.medium: 3,
+        Severity.low: 4,
+    }
+    def is_actionable_fix(text: str) -> bool:
+        if not text:
+            return False
+        return not bool(re.search(r"\bno action required\b|\bno action needed\b|\bno action necessary\b", text, re.I))
+
+    sorted_findings = sorted(
+        all_findings,
+        key=lambda f: (severity_order.get(f.severity, 99), f.title, f.recommended_fix)
+    )
+    for rank, finding in enumerate(sorted_findings, start=1):
+        action_text = finding.recommended_fix.strip()
+        if not action_text or action_text in seen_actions or not is_actionable_fix(action_text):
+            continue
+        seen_actions.add(action_text)
+        impact = Impact.high if finding.severity in [Severity.critical, Severity.high] else Impact.medium
+        effort = Effort.medium if finding.severity in [Severity.critical, Severity.high] else Effort.low
         action_plan.append(ActionPlanItem(
-            rank=i + 1,
-            action=finding.recommended_fix[:200] + "..." if len(finding.recommended_fix) > 200 else finding.recommended_fix,
-            impact=Impact.high if finding.severity == Severity.critical else Impact.medium,
-            effort=Effort.medium,
+            rank=rank,
+            action=action_text if len(action_text) <= 250 else action_text[:250] + "...",
+            impact=impact,
+            effort=effort,
             source_finding_title=finding.title
         ))
+        if len(action_plan) >= 8:
+            break
 
     # Create strengths from positive findings
     strengths = []
     for finding in all_findings:
-        if finding.severity in [Severity.low, Severity.medium] and finding.confidence == Confidence.high:
+        if is_positive_finding(finding):
             strengths.append(f"Strong {finding.title}")
 
     # Create limitations from crawl limitations
@@ -125,8 +189,9 @@ async def run_audit(request: AuditRequest):
         grade=score_result["grade"],
         executive_summary=executive_summary,
         aha_line=(critical_findings[0].why_it_matters if critical_findings else
-                  high_findings[0].why_it_matters if high_findings else
-                  "No critical or high issues found."),
+              high_findings[0].why_it_matters if high_findings else
+              medium_findings[0].why_it_matters if medium_findings else
+              (f"Strong content observed: {strengths[0]}." if strengths else "No major issues detected in the deterministic audit.")),
         score_breakdown=[
             {
                 "check_id": c.check_id,

@@ -78,10 +78,19 @@ def parse_page(url: str, html: str, status_code: int = 200) -> PageData:
 
     # 6. Body text (clean copy without scripts, styles, header/footer boilerplate)
     soup_copy = BeautifulSoup(html, "html.parser")
-    for element in soup_copy(["script", "style", "nav", "footer", "header", "svg", "noscript"]):
+    for element in soup_copy(["script", "style", "nav", "footer", "header", "svg", "noscript", "button", "input", "textarea", "select"]):
         element.decompose()
 
-    body_text = soup_copy.get_text(separator=" ", strip=True)
+    for attr in ["role", "aria-label", "id", "class"]:
+        for element in soup_copy.find_all(attrs={attr: re.compile(r"(nav|menu|breadcrumb|breadcrumbs|footer|header|sidebar|toolbar|navbar|cookie|pagination)", re.I)}):
+            element.decompose()
+
+    main_content = soup_copy.find(["main", "article"])
+    if main_content:
+        body_text = main_content.get_text(separator=" ", strip=True)
+    else:
+        body_text = soup_copy.get_text(separator=" ", strip=True)
+
     body_text = re.sub(r"\s+", " ", body_text)
 
     # 7. JS shell detection

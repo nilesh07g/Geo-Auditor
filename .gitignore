@@ -5,6 +5,12 @@ __pycache__/
 .venv/
 venv/
 .env
+.pytest_cache/
+
+# Project artifacts that should not be committed
+GEO_Auditor_Hiring_Task (1).pdf
+PROJECT_BLUEPRINT.md
+PROJECT_PROGRESS.md
 
 # Node
 node_modules/

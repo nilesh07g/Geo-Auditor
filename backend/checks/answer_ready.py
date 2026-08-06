@@ -4,6 +4,8 @@ import re
 import uuid
 from typing import List, Optional, Tuple
 
+from bs4 import BeautifulSoup
+
 from models import (
     CheckResult,
     Confidence,
@@ -41,44 +43,169 @@ FAQ_HEADING_PATTERNS = [
 
 # Specific facts patterns for Check 4 (from PROJECT_BLUEPRINT.md)
 NUMBER_PATTERN = r'\d+(?:,\d\d\d)*(?:\.\d+)?'
-DATE_PATTERN = r'\d{4}[-/]\d{1,2}[-/]\d{1,2}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{4}'
-ADDRESS_PATTERN = r'\d+\s+(?:[A-Za-z]+\.?)+\s+(?:Street|Avenue|Boulevard|Drive|Road|Lane|Way|Court|Place|Ave|St|Rd|Blvd|Dr)\b'
-PHONE_PATTERN = r'\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}'
+DATE_PATTERN = r'\b(?:19|20)\d{2}\b|\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{4}\b'
+ADDRESS_PATTERN = r'\b\d+\s+(?:[A-Za-z]+\.?)+\s+(?:Street|Avenue|Boulevard|Drive|Road|Lane|Way|Court|Place|Ave|St|Rd|Blvd|Dr)\b'
+PHONE_PATTERN = r'\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b'
+
+MARKETING_ONLY_PATTERNS = [
+    re.compile(r"\b(welcome|quality services|we are the best|leading provider|innovative solutions|our company|industry leader|premium quality|best in class|top-notch|expert team|highly qualified|award-winning|passionate|mission statement|vision statement|values|customer-focused|trusted partner|best-in-class|commitment to)\b", re.I),
+]
+
+FACT_PATTERNS = [
+    ("Founded", re.compile(r"\b(?:founded|established|since)\s+(?:in\s+)?(?:19|20)\d{2}\b", re.I)),
+    ("Serving", re.compile(r"\b(?:serving|serves|available in|covering|operating in)\s+[\w\s,+-]{5,80}\b", re.I)),
+    ("Employees", re.compile(r"\b(?:\d{1,3}(?:,\d{3})*|\d+)\+?\s+(?:employees|team members|staff|professionals)\b", re.I)),
+    ("Certification", re.compile(r"\b(?:ISO\s*\d{3,4}|certified|licensed|registered|accredited)\b", re.I)),
+    ("Availability", re.compile(r"\b(?:24/7|24x7|24 hours|around the clock|emergency service)\b", re.I)),
+    ("Locations", re.compile(r"\b(?:\d{1,3}(?:,\d{3})*|\d+)\+?\s+(?:locations|cities|regions|areas|states|countries)\b", re.I)),
+    ("Address", re.compile(ADDRESS_PATTERN, re.I)),
+    ("Phone", re.compile(PHONE_PATTERN, re.I)),
+]
+
+SENTENCE_SPLIT_RE = re.compile(r'(?<=[.!?])\s+')
+
+
+def split_sentences(text: str) -> List[str]:
+    return [sentence.strip() for sentence in re.split(SENTENCE_SPLIT_RE, text) if sentence.strip()]
+
+
+def is_user_generated_sentence(sentence: str) -> bool:
+    """Heuristically identify testimonial or review-style sentences in otherwise business-owned content."""
+    if not sentence:
+        return False
+
+    lower = sentence.lower().strip()
+    review_markers = [
+        "testimonial",
+        "testimonials",
+        "review",
+        "reviews",
+        "customer story",
+        "customer stories",
+        "what our customers say",
+        "what customers say",
+        "would highly recommend",
+        "highly recommend",
+        "i loved",
+        "i would recommend",
+        "great experience",
+        "amazing service",
+        "excellent service",
+        "five stars",
+        "four stars",
+        "star rating",
+    ]
+    if any(marker in lower for marker in review_markers):
+        return True
+
+    if re.search(r"\b(i|we|my|our)\b.*\b(recommend|love|loved|great|excellent|amazing|satisfied|happy)\b", lower):
+        return True
+
+    return False
+
+
+def extract_business_owned_text(html: str) -> str:
+    """Extract business-owned content from likely editorial sections while skipping reviews and testimonials."""
+    if not html:
+        return ""
+
+    soup = BeautifulSoup(html, "html.parser")
+    for element in soup(["script", "style", "noscript", "svg"]):
+        element.decompose()
+
+    main_content = soup.find(["main", "article", "section"])
+    if main_content:
+        cleaned_text = main_content.get_text(" ", strip=True)
+    else:
+        cleaned_text = soup.get_text(" ", strip=True)
+
+    kept_sentences = [
+        sentence.strip()
+        for sentence in split_sentences(cleaned_text)
+        if sentence.strip() and not is_user_generated_sentence(sentence)
+    ]
+    return re.sub(r"\s+", " ", " ".join(kept_sentences)).strip()
+
+
+def is_boilerplate_sentence(sentence: str) -> bool:
+    lower = sentence.lower().strip()
+    if len(lower.split()) <= 3:
+        return True
+    if lower.startswith("cookie") or lower.startswith("privacy") or lower.startswith("terms"):
+        return True
+    if re.search(r"\b(home|about|contact|menu|follow us|newsletter|subscribe|sign up|login|search|breadcrumb|breadcrumbs|header|footer|navbar|sidebar)\b", lower):
+        return True
+    return False
+
+
+def is_marketing_only_sentence(sentence: str) -> bool:
+    if is_boilerplate_sentence(sentence):
+        return False
+    if len(sentence.split()) < 8:
+        return False
+    return any(pattern.search(sentence) for pattern in MARKETING_ONLY_PATTERNS)
+
+
+def extract_sentence_containing_phrase(text: str, phrase: str) -> str:
+    lower_phrase = phrase.lower()
+    for sentence in split_sentences(text):
+        if lower_phrase in sentence.lower():
+            return sentence
+    return phrase
+
+
+def merge_duplicate_findings(findings: List[Finding]) -> List[Finding]:
+    merged: dict[tuple[str, str, str, str], Finding] = {}
+    for finding in findings:
+        key = (finding.title, finding.severity, finding.confidence, finding.recommended_fix)
+        if key not in merged:
+            merged[key] = finding
+        else:
+            existing = merged[key]
+            if finding.page_url and finding.page_url.strip():
+                pages = set(p.strip() for p in (existing.page_url or "").split(";") if p.strip())
+                pages.add(finding.page_url.strip())
+                existing.page_url = "; ".join(sorted(pages))
+            if finding.evidence and finding.evidence not in existing.evidence:
+                existing.evidence = f"{existing.evidence} | {finding.evidence}"
+    return list(merged.values())
+
 
 def detect_definitional_sentence(text: str) -> Tuple[int, str, str]:
     """Detect quality of entity definition in text.
 
     Returns (pts 0/4/8, matched_text, explanation).
     """
+    if not text:
+        return 0, "", "none"
+
+    if "<" in text:
+        business_owned_text = extract_business_owned_text(text)
+    else:
+        business_owned_text = text
     # Check H1s first (strongest signal)
     if text.strip().startswith('<h1>') or text.strip().startswith('<h1 '):
         # Extract H1 content
         h1_match = re.search(r'<h1[^>]*>(.*?)</h1>', text, re.IGNORECASE)
         if h1_match:
-            h1_text = h1_match.group(1).lower()
-            # Check for vague / filler H1
-            if any(re.search(pat, h1_text) for pat in VAGUE_PHRASES):
-                return 0, h1_match.group(1), "vague_h1"
-            # Check for strong definitional pattern in H1
+            h1_text = h1_match.group(1).strip()
+            lower_h1 = h1_text.lower()
+            if any(re.search(pat, lower_h1) for pat in VAGUE_PHRASES):
+                return 0, h1_text, "vague_h1"
             for pat in DEFINITION_PATTERNS:
-                if re.search(pat, h1_match.group(1), re.IGNORECASE):
-                    return 8, h1_match.group(1), "strong_definition_in_h1"
-            # H1 exists but is just not a definition
-            return 4, h1_match.group(1), "h1_exists_not_definitional"
+                if re.search(pat, h1_text, re.IGNORECASE):
+                    return 8, h1_text, "strong_definition_in_h1"
+            return 4, h1_text, "h1_exists_not_definitional"
 
     # Check first 600 words of body text for definition (simplified)
-    first_chunk = ' '.join(text.split()[:600]).lower()
+    first_chunk = ' '.join(business_owned_text.split()[:600])
     for pat in DEFINITION_PATTERNS:
         match = re.search(pat, first_chunk, re.IGNORECASE)
         if match:
-            snippet = ' '.join(text.split()[max(0, match.start()//10-3):match.end()//10+6])
+            snippet = extract_sentence_containing_phrase(first_chunk, match.group(0))
             return 4, snippet.strip(), "definition_in_body_not_h1"
 
-    # Check for vague phrases in text
-    for phrase in VAGUE_PHRASES:
-        if phrase.lower() in text.lower():
-            return 0, phrase, "vague_phrase"
-
+    # No explicit vague phrase finding here; detect marketing only on sentence-level
     return 0, '', "none"
 
 def detect_faq_headings(text: str) -> List[str]:
@@ -92,35 +219,29 @@ def detect_faq_headings(text: str) -> List[str]:
 def detect_specific_facts(text: str) -> Tuple[int, List[str]]:
     """Detect specific factual content for extractable data.
 
-    Returns (pts 0/8, list_of_facts_found).
+    Returns (pts 0-8, list of factual sentences).
     """
-    facts = []
+    found_sentences: List[str] = []
+    seen: set[str] = set()
 
-    # Look for numbers
-    num_matches = re.findall(NUMBER_PATTERN, text)
-    facts.extend(num_matches)
+    for sentence in split_sentences(text):
+        if len(sentence) < 40:
+            continue
+        if is_boilerplate_sentence(sentence):
+            continue
+        if is_marketing_only_sentence(sentence):
+            continue
 
-    # Look for dates
-    date_matches = re.findall(DATE_PATTERN, text)
-    facts.extend(date_matches)
+        for _, pattern in FACT_PATTERNS:
+            if pattern.search(sentence):
+                normalized_sentence = sentence.strip()
+                if normalized_sentence not in seen:
+                    seen.add(normalized_sentence)
+                    found_sentences.append(normalized_sentence)
+                break
 
-    # Look for addresses
-    address_matches = re.findall(ADDRESS_PATTERN, text)
-    facts.extend(address_matches)
-
-    # Look for phone numbers
-    phone_matches = re.findall(PHONE_PATTERN, text)
-    facts.extend(phone_matches)
-
-    # Score based on number of facts found (up to 8 points)
-    if len(facts) >= 10:
-        return 8, facts  # 8 points for many specific facts
-    elif len(facts) >= 5:
-        return 4, facts  # 4 points for some facts
-    elif len(facts) >= 2:
-        return 2, facts  # 2 points for a few facts
-    else:
-        return 0, facts  # 0 points for few facts
+    score = min(8, len(found_sentences) * 2)
+    return score, found_sentences
 
 def calculate_generic_filler_ratio(text: str) -> int:
     """Calculate generic filler ratio (0-6 points) for content quality.
@@ -224,25 +345,26 @@ def evaluate_answer_ready(
             pt, matched_text, reason = detect_definitional_sentence(page.body_text)
             score += pt
 
-            if reason == "vague_phrase":
-                findings.append(Finding(
-                    id=str(uuid.uuid4()),
-                    check_id=CHECK_ID,
-                    title="Generic marketing copy detected",
-                    severity=Severity.medium,
-                    confidence=Confidence.high,
-                    page_url=page.url,
-                    evidence=f"Generic phrase: '{matched_text}'",
-                    why_it_matters=(
-                        "Generic marketing copy has low extractable value for AI engines. "
-                        "AI prefers specific, factual statements about your business for accurate citations."
-                    ),
-                    recommended_fix=(
-                        f"<!-- Replace generic marketing copy with specific, factual content -->\n"
-                        f"Original: \"{matched_text}\"\\n\\n"
-                        f"Suggested: \"Our [service type] business has served [number] clients since [year] in [location].\""
-                    ),
-                ))
+            if page.body_text:
+                for sentence in split_sentences(page.body_text):
+                    if is_marketing_only_sentence(sentence):
+                        findings.append(Finding(
+                            id=str(uuid.uuid4()),
+                            check_id=CHECK_ID,
+                            title="Generic marketing copy detected",
+                            severity=Severity.medium,
+                            confidence=Confidence.high,
+                            page_url=page.url,
+                            evidence=sentence,
+                            why_it_matters=(
+                                "AI engines prefer meaningful, factual sentences over generic marketing copy for accurate business extraction."
+                            ),
+                            recommended_fix=(
+                                "Replace this marketing-heavy sentence with a clear, factual statement about your business, "
+                                "services, location, or credentials."
+                            ),
+                        ))
+                        break
 
         # Track all text for filler analysis
         if page.body_text:
@@ -297,32 +419,24 @@ def evaluate_answer_ready(
         if not page or not page.body_text:
             continue
 
-        score, facts_found = detect_specific_facts(page.body_text)
+        fact_score, facts_found = detect_specific_facts(page.body_text)
+        score += fact_score
 
         if facts_found:
-            # Add finding about specific facts found
-            if score > 0:
-                findings.append(Finding(
-                    id=str(uuid.uuid4()),
-                    check_id=CHECK_ID,
-                    title="Extractable specific facts detected",
-                    severity=Severity.low,
-                    confidence=Confidence.high,
-                    page_url=page.url,
-                    evidence=f"Facts found: {', '.join(facts_found[:3])}{'...' if len(facts_found) > 3 else ''}",
-                    why_it_matters=(
-                        "Specific facts (numbers, dates, locations, credentials) provide extractable content "
-                        "that AI engines can quote directly in answers about your business."
-                    ),
-                    recommended_fix=(
-                        f"<!-- These facts demonstrate your business has specific, verifiable information -->\n"
-                        f"* Founded: {facts_found[0] if facts_found else '[year]'}\\n"
-                        f"* Customers served: {facts_found[1] if len(facts_found) > 1 else '[number]'}\\n"
-                        f"* Service area: {facts_found[2] if len(facts_found) > 2 else '[location]'}\\n"
-                    ),
-                ))
+            findings.append(Finding(
+                id=str(uuid.uuid4()),
+                check_id=CHECK_ID,
+                title="Extractable specific facts detected",
+                severity=Severity.low,
+                confidence=Confidence.high,
+                page_url=page.url,
+                evidence=facts_found[0],
+                why_it_matters=(
+                    "Specific factual sentences provide extractable content that AI engines can cite accurately."
+                ),
+                recommended_fix="No action required. This page contains well-formed factual content.",
+            ))
         else:
-            # Add finding about lack of specific facts
             findings.append(Finding(
                 id=str(uuid.uuid4()),
                 check_id=CHECK_ID,
@@ -330,24 +444,21 @@ def evaluate_answer_ready(
                 severity=Severity.high,
                 confidence=Confidence.high,
                 page_url=page.url,
-                evidence="No numbers, dates, addresses, or credentials detected in page content",
+                evidence="No measurable factual content detected in page copy.",
                 why_it_matters=(
-                    "Without specific facts, AI engines must rely on generic marketing copy to describe your business, "
-                    "leading to incomplete or inaccurate AI-generated answers."
+                    "Without measurable facts, AI engines must rely on generic copy, which reduces answer precision and business citation value."
                 ),
                 recommended_fix=(
-                    f"<!-- Add specific factual content to your service page -->\n"
-                    f"* Founded: [Year your business was established]\\n"
-                    f"* Customers served: [Number of customers]\\n"
-                    f"* Service area: [City, State, or region you serve]\\n"
-                    f"* Certifications: [Relevant certifications or licenses]\\n"
-                    f"* Revenue: $[Annual revenue or typical project size]"
+                    "Add specific, measurable facts such as establishment year, service area, staff size, certifications, or operating hours."
                 ),
             ))
 
     # Calculate generic filler ratio score (up to 6 points)
     filler_score = calculate_generic_filler_ratio(' '.join(all_text_chunks))
     score += filler_score
+
+    # Deduplicate repeated findings before returning
+    findings = merge_duplicate_findings(findings)
 
     # Clamp score to valid range
     score = min(score, MAX_SCORE)

@@ -105,9 +105,17 @@ export const FindingCard: React.FC<FindingCardProps> = ({ checkResults }) => {
             {finding.page_url && (
               <div className="finding-url">
                 <span className="url-label">Target Page:</span>
-                <a href={finding.page_url} target="_blank" rel="noopener noreferrer" className="url-link">
-                  {finding.page_url} <ExternalLinkIcon className="icon-xs inline" />
-                </a>
+                <div className="url-list">
+                  {finding.page_url
+                    .split(/[;,\n]+/)
+                    .map((url) => url.trim())
+                    .filter(Boolean)
+                    .map((url) => (
+                      <a key={url} href={url} target="_blank" rel="noopener noreferrer" className="url-link">
+                        {url} <ExternalLinkIcon className="icon-xs inline" />
+                      </a>
+                    ))}
+                </div>
               </div>
             )}
 
