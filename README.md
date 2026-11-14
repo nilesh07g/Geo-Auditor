@@ -1,5 +1,11 @@
 # GEO Auditor: AI Extraction Readiness Assessment
 
+## Live Deployment
+
+- **Frontend:** [geo-auditor-frontend.vercel.app](https://geo-auditor-frontend.vercel.app)
+- **Backend API docs:** [geo-auditor-kappa.vercel.app/docs](https://geo-auditor-kappa.vercel.app/docs)
+- **Backend health:** [geo-auditor-kappa.vercel.app/health](https://geo-auditor-kappa.vercel.app/health)
+
 ## Introduction
 
 In an era dominated by large language models (LLMs) and generative AI, a business's online visibility extends beyond traditional search engine rankings. AI engines now actively extract, synthesize, and present information directly to users, often citing or referencing businesses in their responses. This shift introduces a new frontier in digital presence: **Generative Engine Optimization (GEO)**.
