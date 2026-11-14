@@ -3,8 +3,6 @@
 ## Live Deployment
 
 - **Frontend:** [geo-auditor-frontend.vercel.app](https://geo-auditor-frontend.vercel.app)
-- **Backend API docs:** [geo-auditor-kappa.vercel.app/docs](https://geo-auditor-kappa.vercel.app/docs)
-- **Backend health:** [geo-auditor-kappa.vercel.app/health](https://geo-auditor-kappa.vercel.app/health)
 
 ## Introduction
 
